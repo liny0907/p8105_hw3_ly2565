@@ -1,1 +1,1 @@
-# p8105_hw3_ly2565
+This is the repository for P8105 hw3.
