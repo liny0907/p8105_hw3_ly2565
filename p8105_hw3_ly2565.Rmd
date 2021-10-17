@@ -1,0 +1,186 @@
+---
+title: "p8105_hw2_ly2565"
+author: "Lin Yang"
+date: "10/02/2021"
+output: github_document
+---
+
+```{r, include = FALSE}
+library(tidyverse)
+library(readxl)
+```
+
+# Problem 1
+
+## Read and clean the Mr. Trash Wheel dataset.
+
+```{r}
+trash_wheel_df = read_excel("data/Trash-Wheel-Collection-Totals-7-2020-2.xlsx", sheet = "Mr. Trash Wheel", range = "A2:N535") %>%  
+  janitor::clean_names() %>% 
+  drop_na(dumpster) %>% 
+  mutate(sports_balls = round(sports_balls, 0))
+trash_wheel_df
+```
+
+## Read and clean precipitation data for 2018 and 2019.
+
+```{r}
+prcp_2018_df = 
+  read_excel("data/Trash-Wheel-Collection-Totals-7-2020-2.xlsx", sheet = "2018 Precipitation", range = "A2:B14") %>% 
+  janitor::clean_names() %>% 
+  mutate(year = 2018) %>% 
+  relocate(year)
+
+prcp_2019_df = 
+  read_excel("data/Trash-Wheel-Collection-Totals-7-2020-2.xlsx", sheet = "2019 Precipitation", range = "A2:B14") %>% 
+  janitor::clean_names() %>% 
+  mutate(year = 2019) %>% 
+  relocate(year)
+```
+
+## Combine precipaitation datasets.
+
+```{r}
+comb_prcp_df = 
+  bind_rows(prcp_2018_df, prcp_2019_df) %>% 
+  mutate(month = month.name[month])
+comb_prcp_df
+```
+
+* The trash wheel dataset contains `r nrow(trash_wheel_df)` observations of `r ncol(trash_wheel_df)` variables. Trash types include `r trash_wheel_df %>% select(plastic_bottles:homes_powered) %>% names()`. The trash measurements are `r trash_wheel_df %>% select(weight_tons, volume_cubic_yards) %>% names()`. The data was collected from 5/16/14 to 1/4/21.
+* The combined precipitation dataset contains `r nrow(comb_prcp_df)` observations of `r ncol(comb_prcp_df)` variables: `r names(comb_prcp_df)`. The total precipitation in 2018 was `r sum(pull(prcp_2018_df, total))` inches; the total precipitation in 2019 was `r sum(pull(prcp_2019_df, total))` inches; the total precipitation in 2018 and 2019 was `r sum(pull(comb_prcp_df, total))` inches. In these two years, 2018 Sep had the most precipitation which was `r max(pull(comb_prcp_df, total))` inches.
+* The median number of sports balls in a dumpster in 2019 is `r trash_wheel_df %>% filter(year == 2019) %>% pull(sports_balls) %>% median()`.
+
+# Problem 2
+
+## Clean pols_month dataset.
+
+```{r, message = FALSE}
+pols_month_df = 
+  read_csv("data/pols-month.csv") %>% 
+  janitor::clean_names() %>% 
+  separate(mon, into = c("year", "month", "day"), convert = TRUE) %>% 
+  mutate(
+    month = month.name[month],
+    year = as.character(year),
+    president = ifelse(prez_dem == 1, "dem", "gop")) %>%
+  select(-prez_gop, -prez_dem, -day)
+pols_month_df  
+```
+
+## Clean snp dataset.
+
+```{r, message = FALSE}
+snp_df = 
+  read_csv("data/snp.csv") %>% 
+  janitor::clean_names() %>% 
+  separate(date, into = c("month", "day", "year"), convert = TRUE) %>% 
+  mutate(
+    year = ifelse(year <= 15, year + 2000, year + 1900),
+    month = month.name[month]) %>% 
+  select(-day) %>% 
+  mutate(year = as.character(year)) %>% 
+  arrange(year, month) %>% 
+  relocate(year, month)
+snp_df 
+```
+
+## Clean unemployment dataset.
+
+```{r, message = FALSE}
+unemploy_df =
+  read_csv("data/unemployment.csv") %>%
+  janitor::clean_names() %>% 
+  pivot_longer(
+    jan:dec,
+    names_to = "month",
+    values_to = "unemploy_percent") %>% 
+  mutate(
+    year = as.character(year),
+    month = month.name[as.factor(month)])
+unemploy_df
+``` 
+
+## Merge snp into pols, and then merge unemployment.
+
+```{r}
+merging_df =
+  left_join(pols_month_df, snp_df, by = c("year", "month")) %>% 
+  left_join(unemploy_df, by = c("year", "month"))
+merging_df
+```
+
+* The `pols_month` dataset has `r nrow(pols_month_df)` rows and `r ncol(pols_month_df)` columns with variable names: `r names(pols_month_df)`. This dataset of the number of national politicians at any given time covers from `r min(pull(pols_month_df, year)) ` to `r max(pull(pols_month_df, year))`. In the `president` column, `dem` means the president at that given time was democratic, `gop` means the president at that time was republican.
+* The `snp` dataset has `r nrow(snp_df)` rows and `r ncol(snp_df)` columns with variable names: `r names(snp_df)`. It contains the closing values of the Standard & Poor’s stock index on the associated date from `r min(pull(snp_df, year))` to `r max(pull(snp_df, year))`. The largest closing value was `r max(pull(snp_df, close))` which was in May, 2015; the smallest closing value was `r min(pull(snp_df, close))` which was January, 1950.
+* The `unemployment` dataset has `r nrow(unemploy_df)` rows and `r ncol(unemploy_df)` columns with variable names: `r names(unemploy_df)`. The dataset of unemployment percentage covers from `r min(pull(unemploy_df, year))` to `r max(pull(unemploy_df, year))`. The highest unemployment percentage was `r max(pull(unemploy_df, unemploy_percent), na.rm = TRUE)`, the lowest unemployment percentage was `r min(pull(unemploy_df, unemploy_percent), na.rm = TRUE)`. 
+* The combined dataset has `r nrow(merging_df)` rows and `r ncol(merging_df)` columns with variable names: `r names(merging_df)`. It contains data from `r min(pull(merging_df, year))` to ` r max(pull(merging_df, year))`.
+
+
+# Problem 3
+
+## Load and tidy the popular baby name dataset.
+
+```{r, message = FALSE}
+babyname_df = 
+  read_csv("data/Popular_Baby_Names.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(
+    gender = str_to_lower(gender),
+    ethnicity = str_to_title(ethnicity),
+    childs_first_name = str_to_title(childs_first_name),
+    ethnicity = recode(ethnicity,
+                       "Black Non Hisp" = "Black Non Hispanic",
+                       "Asian And Paci" = "Asian And Pacific Islander",
+                       "White Non Hisp" = "White Non Hispanic")
+  ) %>% 
+  distinct()
+babyname_df
+```
+
+## Create a well-structured, reader-friendly table showing the rank in popularity of the name “Olivia”.
+
+```{r}
+babyname_df %>% 
+  filter(childs_first_name == "Olivia") %>% 
+  select(year_of_birth, ethnicity, rank) %>% 
+  pivot_wider(
+    names_from = "year_of_birth",
+    values_from = "rank") %>% 
+  knitr::kable()
+```
+
+## Create a similar table showing the most popular name among male children.
+
+```{r}
+babyname_df %>% 
+  filter(rank == 1, gender == "male") %>% 
+  select(year_of_birth, ethnicity, childs_first_name) %>% 
+  pivot_wider(
+    names_from = "year_of_birth",
+    values_from = "childs_first_name") %>% 
+  knitr::kable()
+```
+
+## scatter plot
+```{r}
+babyname_df %>%
+  filter(year_of_birth == 2016, gender == "male", ethnicity == "White Non Hispanic") %>% 
+  ggplot(aes(x = rank, y = count)) +
+  geom_point() +
+  labs(
+    title = "Count vs Rank for Male White Non-hispanic Children Born in 2016",
+    x = "Rank in Popularity",
+    y = "Number of Children") 
+
+ggsave("scatterplot_hw2.pdf", height = 4, width = 6)
+```   
+
+
+
+
+
+
+
+
+
+
