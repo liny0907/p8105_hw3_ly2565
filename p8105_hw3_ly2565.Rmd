@@ -7,6 +7,9 @@ output: github_document
 
 ```{r, setup}
 library(tidyverse)
+library(ggridges)
+library(patchwork)
+library(p8105.datasets)
 
 knitr::opts_chunk$set(
   fig.width = 6,
@@ -30,7 +33,6 @@ scale_fill_discrete = scale_fill_viridis_d
 ## Load the instacart data.
 
 ```{r}
-library(p8105.datasets)
 data("instacart")
 instacart
 ```
@@ -105,8 +107,95 @@ mean_hour_dow %>%
 ```
 
 
+# Problem 2
 
+## Load the BRFSS data set.
+```{r}
+data("brfss_smart2010")
+brfss_df = 
+  brfss_smart2010 %>% 
+  janitor::clean_names() %>% 
+  separate(locationdesc, into = c('state', 'location'), sep = "-") %>%
+  select(-state) %>%
+  rename(state = locationabbr) %>% 
+  filter(topic == "Overall Health") %>% 
+  mutate(response = factor(response, levels = c("Poor", "Fair", "Good", "Very good", "Excellent"))) %>% 
+  arrange(response)
+brfss_df
+```
 
+## Some questions related to the data set.
+
+In 2002, which states were observed at 7 or more locations? What about in 2010:
+```{r}
+brfss_2002 = 
+  brfss_df %>% 
+  filter(year == 2002) %>% 
+  select(state, location) %>% 
+  group_by(state) %>% 
+  summarize(n_locations = n()) %>% 
+  filter(n_locations >= 7)
+
+brfss_2010 = 
+  brfss_df %>% 
+  filter(year == 2010) %>% 
+  select(state, location) %>% 
+  group_by(state) %>% 
+  summarize(n_locations = n()) %>% 
+  filter(n_locations >= 7)
+```
+In 2002, the states observed at 7 or more locations were `r pull(brfss_2002, state)`. In 2010, they were `r pull(brfss_2010, state)`.
+
+Construct a dataset that is limited to Excellent responses, and contains, year, state, and a variable that averages the data_value across locations within a state:
+```{r}
+excellent_df = 
+  brfss_df %>% 
+  filter(response == "Excellent") %>% 
+  group_by(state, year) %>% 
+  summarize(data_value_mean = mean(data_value, na.rm = TRUE))
+excellent_df
+```
+* The excellent response data set contains average data values of `r n_distinct(pull(excellent_df, state))` states (including DC) from `r min(pull(excellent_df, year))` to `r max(pull(excellent_df, year))`. 
+
+Make a “spaghetti” plot of this average value over time within a state:
+```{r}
+## need more aes and comments
+excellent_df %>% 
+  ggplot(aes(x = year, y = data_value_mean, group = state, color = state)) +
+  geom_line() +
+  labs(
+    title = "Average Data Value Over Time Within A State",
+    x = "Year",
+    y = "Average Data Value"
+  )
+```
+
+Make a two-panel plot showing, for the years 2006, and 2010, distribution of data_value for responses (“Poor” to “Excellent”) among locations in NY State:
+```{r}
+ny_2006 = 
+  brfss_df %>% 
+  filter(year == 2006, state == "NY") %>% 
+  ggplot(aes(x = data_value, y = response)) +
+  geom_density_ridges(scale = .85) +
+  labs(
+    title = "Distribution of Data Value in 2006",
+    x = "Data Value",
+    y = "Response"
+  )
+
+ny_2010 = 
+  brfss_df %>% 
+  filter(year == 2010, state == "NY") %>% 
+  ggplot(aes(x = data_value, y = response)) +
+  geom_density_ridges(scale = .85) +
+  labs(
+    title = "Distribution of Data Value in 2010",
+    x = "Data Value",
+    y = "Response"
+  )
+
+ny_2006 + ny_2010
+```
 
 
 
