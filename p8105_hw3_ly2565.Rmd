@@ -5,6 +5,77 @@ date: "10/17/2021"
 output: github_document
 ---
 
+```{r, setup}
+library(tidyverse)
+
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+# Problem 1
+
+## Load the instacart data.
+
+```{r}
+library(p8105.datasets)
+data("instacart")
+instacart
+```
+
+* The data set has `r nrow(instacart)` rows and `r ncol(instacart)` columns with variables: `r names(instacart)`. 
+
+## Some questions related to this data set.
+How many aisles are there, and which aisles are the most items ordered from?
+```{r}
+aisle_count = 
+  instacart %>% 
+  select(aisle) %>% 
+  n_distinct()
+aisle_count
+
+aisle_most = 
+  instacart %>% 
+  group_by(aisle) %>% 
+  summarize(n_obs = n()) %>% 
+  mutate(aisle_rank = min_rank(desc(n_obs))) %>% 
+  filter(aisle_rank < 3)
+aisle_most
+```
+
+* There are `r aisle_count` aisles in total, and the aisles that the most items are ordered from are `r pull(aisle_most, aisle) `.
+
+Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered.
+```{r}
+instacart %>% 
+  group_by(aisle) %>% 
+  summarize(n_obs = n()) %>% 
+  filter(n_obs > 10000) %>% 
+  mutate(aisle = fct_reorder(factor(aisle), n_obs)) %>% 
+  ggplot(aes(x = n_obs, y = aisle)) +
+  geom_point() +
+  labs(
+    title = "Number of Items Ordered from Aisles with over 10000 Items",
+    x = "Number of Items",
+    y = "Aisles",
+    caption = "Data from the Instacart Online Grocery Shopping Dataset 2017")
+```
+
+
+
+
 
 
 
