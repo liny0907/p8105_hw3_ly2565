@@ -38,7 +38,7 @@ instacart
 * The data set has `r nrow(instacart)` rows and `r ncol(instacart)` columns with variables: `r names(instacart)`. 
 
 ## Some questions related to this data set.
-How many aisles are there, and which aisles are the most items ordered from?
+How many aisles are there, and which aisles are the most items ordered from:
 ```{r}
 aisle_count = 
   instacart %>% 
@@ -57,7 +57,7 @@ aisle_most
 
 * There are `r aisle_count` aisles in total, and the aisles that the most items are ordered from are `r pull(aisle_most, aisle) `.
 
-Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered.
+Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered:
 ```{r}
 instacart %>% 
   group_by(aisle) %>% 
@@ -73,8 +73,36 @@ instacart %>%
     caption = "Data from the Instacart Online Grocery Shopping Dataset 2017")
 ```
 
+Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”:
+```{r}
+instacart %>% 
+  filter(aisle == c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>% 
+  group_by(aisle, product_name) %>% 
+  summarize(n_items = n()) %>% 
+  mutate(product_rank = min_rank(desc(n_items))) %>% 
+  filter(product_rank < 4) %>% 
+  group_by(aisle) %>% 
+  arrange(-n_items) %>% 
+  select(-product_rank) %>% 
+  knitr::kable()
+```
 
-
+Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week:
+```{r}
+mean_hour_dow =
+  instacart %>% 
+  filter(product_name == c("Pink Lady Apples", "Coffee Ice Cream")) %>% 
+  group_by(product_name, order_dow) %>% 
+  summarize(mean_hour = mean(order_hour_of_day)) %>% 
+  pivot_wider(
+    names_from = order_dow,
+    values_from = mean_hour
+  )  
+  
+colnames(mean_hour_dow) = c("", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+mean_hour_dow %>% 
+  knitr::kable()
+```
 
 
 
