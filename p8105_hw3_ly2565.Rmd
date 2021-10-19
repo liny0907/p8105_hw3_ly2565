@@ -175,27 +175,69 @@ Make a two-panel plot showing, for the years 2006, and 2010, distribution of dat
 ny_2006 = 
   brfss_df %>% 
   filter(year == 2006, state == "NY") %>% 
-  ggplot(aes(x = data_value, y = response)) +
-  geom_density_ridges(scale = .85) +
+  ggplot(aes(x = response, y = data_value)) +
+  geom_boxplot() +
   labs(
     title = "Distribution of Data Value in 2006",
-    x = "Data Value",
-    y = "Response"
+    x = "Response",
+    y = "Data Value"
   )
 
 ny_2010 = 
   brfss_df %>% 
   filter(year == 2010, state == "NY") %>% 
-  ggplot(aes(x = data_value, y = response)) +
-  geom_density_ridges(scale = .85) +
+  ggplot(aes(x = response, y = data_value)) +
+  geom_boxplot() +
   labs(
     title = "Distribution of Data Value in 2010",
-    x = "Data Value",
-    y = "Response"
+    x = "Response",
+    y = "Data Value"
   )
 
 ny_2006 + ny_2010
+
+ny_2006 + ny_2010
 ```
+* From the plot, we can see that data values for positive responses(excellent, very good, good) were greater than those for fair and poor responses in both 2006 and 2010.
+
+# Problem 3
+
+## Load and tidy the accelerometer data set.
+
+```{r}
+accelerometer_df = 
+  read_csv(file = "data/accel_data.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(
+    weekday_vs_end = ifelse(day %in% c('Saturday', 'Sunday'), 'Weekend', 'Weekday')) %>% 
+    select(day_id, week, day, weekday_vs_end, everything()) %>% 
+  pivot_longer(
+    activity_1:activity_1440,
+    names_to = "minute",
+    names_prefix = "activity_",
+    values_to = "activity_count"
+  ) %>% 
+  mutate(minute = as.numeric(minute))
+
+accelerometer_df
+```
+* The resulting data set has `r nrow(accelerometer_df)` observations of `r ncol(accelerometer_df)` variables: `r names(accelerometer_df)`.
+
+## Aggregate activity counts for each day.
+
+```{r}
+df = 
+  accelerometer_df %>% 
+  group_by(week, day) %>% 
+  summarize(activity_total = sum(activity_count)) %>% 
+  pivot_wider(
+    names_from = day,
+    values_from = activity_total
+  ) %>% 
+  select(week, Monday, Tuesday, Wednesday, Thursday, Friday, everything()) %>% 
+  knitr::kable()
+```
+
 
 
 
