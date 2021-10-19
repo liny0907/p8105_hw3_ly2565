@@ -7,7 +7,6 @@ output: github_document
 
 ```{r, setup, include = FALSE}
 library(tidyverse)
-library(ggridges)
 library(patchwork)
 library(p8105.datasets)
 
@@ -36,11 +35,11 @@ scale_fill_discrete = scale_fill_viridis_d
 data("instacart")
 instacart
 ```
-
-* The data set has `r nrow(instacart)` rows and `r ncol(instacart)` columns with variables: `r names(instacart)`. 
+* The data set contains `r nrow(instacart)` observations of `r ncol(instacart)` variables: `r names(instacart)`. In total, there are `r n_distinct(pull(instacart, department))` departments and `r n_distinct(pull(instacart, user_id))` unique users. In the `reordered` column, `1` means this product was ordered by this user in the past, `0` means this product was not. 
 
 ## Some questions related to this data set.
-How many aisles are there, and which aisles are the most items ordered from:
+
+#### How many aisles are there, and which aisles are the most items ordered from:
 ```{r}
 aisle_count = 
   instacart %>% 
@@ -59,7 +58,7 @@ aisle_most
 
 * There are `r aisle_count` aisles in total, and the aisles that the most items are ordered from are `r pull(aisle_most, aisle) `.
 
-Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered:
+#### Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered:
 ```{r}
 instacart %>% 
   group_by(aisle) %>% 
@@ -69,14 +68,19 @@ instacart %>%
   ggplot(aes(x = n_obs, y = aisle)) +
   geom_point() +
   labs(
-    title = "Number of Items Ordered from Aisles with over 10000 Items",
-    x = "Number of Items",
+    title = "Aisle Sale Plot",
+    x = "Number of Items Ordered",
     y = "Aisles",
-    caption = "Data from the Instacart Online Grocery Shopping Dataset 2017")
+    caption = "Data from the Instacart Online Grocery Shopping Dataset 2017") +
+  scale_x_continuous(
+    breaks = c(20000, 40000, 60000, 80000, 100000, 120000, 140000, 160000), 
+    limits = c(0, 160000)
+  )
 ```
+* From this plot, we can clearly see that fresh vegetables and fresh fruits are the two most popular aisles. And they are the only two aisles with over 100000 items ordered. 
 
-Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”:
-```{r}
+#### Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”:
+```{r, warning = FALSE}
 instacart %>% 
   filter(aisle == c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>% 
   group_by(aisle, product_name) %>% 
@@ -88,9 +92,11 @@ instacart %>%
   select(-product_rank) %>% 
   knitr::kable()
 ```
+* In the `baking ingredients` aisle, the three most popular items are light brown sugar, pure baking soda, and organic vanilla extract; for `dog food care` aisle, they are organic grain free chicken & vegetable dog food, organic chicken & brown rice recipe, and original dry dog; for `packaged vegetables fruits` aisle, they are organic baby spinach, organic raspberries, and organic blueberries. 
 
-Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week:
-```{r}
+
+#### Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week:
+```{r, warning = FALSE}
 mean_hour_dow =
   instacart %>% 
   filter(product_name == c("Pink Lady Apples", "Coffee Ice Cream")) %>% 
@@ -105,12 +111,12 @@ colnames(mean_hour_dow) = c("", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
 mean_hour_dow %>% 
   knitr::kable()
 ```
-
+* According to this table, the mean hour of the day at which coffee ice cream are ordered is higher than that at which pink lady apples are order on all days of the week, except Friday.
 
 # Problem 2
 
-## Load the BRFSS data set.
-```{r}
+## Load and tidy the BRFSS data set.
+```{r, warning = FALSE}
 data("brfss_smart2010")
 brfss_df = 
   brfss_smart2010 %>% 
@@ -118,7 +124,9 @@ brfss_df =
   separate(locationdesc, into = c('state', 'location'), sep = "-") %>%
   select(-state) %>%
   rename(state = locationabbr) %>% 
-  filter(topic == "Overall Health") %>% 
+  filter(
+    topic == "Overall Health",
+    response %in% c("Excellent", "Very good", "Good", "Fair", "Poor")) %>% 
   mutate(response = factor(response, levels = c("Poor", "Fair", "Good", "Very good", "Excellent"))) %>% 
   arrange(response)
 brfss_df
@@ -126,7 +134,7 @@ brfss_df
 
 ## Some questions related to the data set.
 
-In 2002, which states were observed at 7 or more locations? What about in 2010:
+#### In 2002, which states were observed at 7 or more locations? What about in 2010:
 ```{r}
 brfss_2002 = 
   brfss_df %>% 
@@ -144,59 +152,47 @@ brfss_2010 =
   summarize(n_locations = n()) %>% 
   filter(n_locations >= 7)
 ```
-In 2002, the states observed at 7 or more locations were `r pull(brfss_2002, state)`. In 2010, they were `r pull(brfss_2010, state)`.
+* In 2002, there were `r length(pull(brfss_2002, state))` states observed at 7 or more locations, they were `r pull(brfss_2002, state)`. In 2010, there were `r length(pull(brfss_2010, state))` states observed at 7 or more locations: `r pull(brfss_2010, state)`.
 
-Construct a dataset that is limited to Excellent responses, and contains, year, state, and a variable that averages the data_value across locations within a state:
+#### Construct a dataset that is limited to Excellent responses, and contains, year, state, and a variable that averages the data_value across locations within a state:
 ```{r}
 excellent_df = 
   brfss_df %>% 
   filter(response == "Excellent") %>% 
-  group_by(state, year) %>% 
+  group_by(year, state) %>% 
   summarize(data_value_mean = mean(data_value, na.rm = TRUE))
 excellent_df
 ```
 * The excellent response data set contains average data values of `r n_distinct(pull(excellent_df, state))` states (including DC) from `r min(pull(excellent_df, year))` to `r max(pull(excellent_df, year))`. 
 
-Make a “spaghetti” plot of this average value over time within a state:
+#### Make a “spaghetti” plot of this average value over time within a state:
 ```{r}
-## need more aes and comments
 excellent_df %>% 
   ggplot(aes(x = year, y = data_value_mean, group = state, color = state)) +
-  geom_line() +
+  geom_line(aes(group = state), alpha = 0.8) +
   labs(
-    title = "Average Data Value Over Time Within A State",
+    title = "Average Data Values Over Time",
     x = "Year",
-    y = "Average Data Value"
-  )
+    y = "Average Data Values",
+    color = "State"
+  ) +
+  theme(legend.position = "right")
 ```
 
-Make a two-panel plot showing, for the years 2006, and 2010, distribution of data_value for responses (“Poor” to “Excellent”) among locations in NY State:
+* comments?
+
+#### Make a two-panel plot showing, for the years 2006, and 2010, distribution of data_value for responses (“Poor” to “Excellent”) among locations in NY State:
 ```{r}
-ny_2006 = 
-  brfss_df %>% 
-  filter(year == 2006, state == "NY") %>% 
+brfss_df %>% 
+  filter(year == 2006 | year == 2010, state == "NY") %>% 
   ggplot(aes(x = response, y = data_value)) +
   geom_boxplot() +
   labs(
-    title = "Distribution of Data Value in 2006",
+    title = "Distribution of Data Values in NY State",
     x = "Response",
-    y = "Data Value"
-  )
-
-ny_2010 = 
-  brfss_df %>% 
-  filter(year == 2010, state == "NY") %>% 
-  ggplot(aes(x = response, y = data_value)) +
-  geom_boxplot() +
-  labs(
-    title = "Distribution of Data Value in 2010",
-    x = "Response",
-    y = "Data Value"
-  )
-
-ny_2006 + ny_2010
-
-ny_2006 + ny_2010
+    y = "Data Values"
+  ) +
+  facet_grid(. ~ year)
 ```
 * From the plot, we can see that data values for positive responses(excellent, very good, good) were greater than those for fair and poor responses in both 2006 and 2010.
 
@@ -247,16 +243,16 @@ accelerometer_df %>%
   labs(
     title = "24-hour Activity Counts",
     x = "Time",
-    y = "Activity Counts"
+    y = "Activity Counts",
+    color = "Day"
   ) +
   scale_x_continuous(
     breaks = c(0, 240, 480, 720, 960, 1200, 1440), 
-    labels = c("12am.", "4am", "8am", "12pm", "4pm", "8pm", "11:59pm"),
+    labels = c("12am", "4am", "8am", "12pm", "4pm", "8pm", "11:59pm"),
     limits = c(0, 1440)
   )
 ```
 * From the plot, we can see that activity counts tend to be higher in 3 periods of time on each day: 6am-12pm, 4pm-6pm, and 8pm-10pm(especially on Wed and Fri); activity counts tend to be lower from 10pm-6pm each day which may be the sleeping period. 
-
 
 
 
