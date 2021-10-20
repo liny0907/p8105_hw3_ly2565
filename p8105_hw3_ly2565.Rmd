@@ -7,7 +7,6 @@ output: github_document
 
 ```{r, setup, include = FALSE}
 library(tidyverse)
-library(patchwork)
 library(p8105.datasets)
 
 knitr::opts_chunk$set(
@@ -77,18 +76,18 @@ instacart %>%
     limits = c(0, 160000)
   )
 ```
+
 * From this plot, we can clearly see that fresh vegetables and fresh fruits are the two most popular aisles. And they are the only two aisles with over 100000 items ordered. 
 
 #### Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”:
-```{r, warning = FALSE}
+```{r, message = FALSE, warning = FALSE}
 instacart %>% 
   filter(aisle == c("baking ingredients", "dog food care", "packaged vegetables fruits")) %>% 
   group_by(aisle, product_name) %>% 
   summarize(n_items = n()) %>% 
   mutate(product_rank = min_rank(desc(n_items))) %>% 
   filter(product_rank < 4) %>% 
-  group_by(aisle) %>% 
-  arrange(-n_items) %>% 
+  arrange(aisle, product_rank) %>% 
   select(-product_rank) %>% 
   knitr::kable()
 ```
@@ -96,7 +95,7 @@ instacart %>%
 
 
 #### Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week:
-```{r, warning = FALSE}
+```{r, message = FALSE, warning = FALSE}
 mean_hour_dow =
   instacart %>% 
   filter(product_name == c("Pink Lady Apples", "Coffee Ice Cream")) %>% 
@@ -105,7 +104,7 @@ mean_hour_dow =
   pivot_wider(
     names_from = order_dow,
     values_from = mean_hour
-  )  
+  ) 
   
 colnames(mean_hour_dow) = c("", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
 mean_hour_dow %>% 
@@ -131,6 +130,7 @@ brfss_df =
   arrange(response)
 brfss_df
 ```
+* This data set has `r nrow(brfss_df)` rows and `r ncol(brfss_df)` columns, focusing on the overall health topic from `r min(pull(brfss_df, year))` to `r max(pull(brfss_df, year))`.
 
 ## Some questions related to the data set.
 
@@ -155,7 +155,7 @@ brfss_2010 =
 * In 2002, there were `r length(pull(brfss_2002, state))` states observed at 7 or more locations, they were `r pull(brfss_2002, state)`. In 2010, there were `r length(pull(brfss_2010, state))` states observed at 7 or more locations: `r pull(brfss_2010, state)`.
 
 #### Construct a dataset that is limited to Excellent responses, and contains, year, state, and a variable that averages the data_value across locations within a state:
-```{r}
+```{r, message = FALSE}
 excellent_df = 
   brfss_df %>% 
   filter(response == "Excellent") %>% 
@@ -169,7 +169,7 @@ excellent_df
 ```{r}
 excellent_df %>% 
   ggplot(aes(x = year, y = data_value_mean, group = state, color = state)) +
-  geom_line(aes(group = state), alpha = 0.8) +
+  geom_line(alpha = 0.8) +
   labs(
     title = "Average Data Values Over Time",
     x = "Year",
@@ -179,21 +179,22 @@ excellent_df %>%
   theme(legend.position = "right")
 ```
 
-* comments?
+* The plot shows that average data values of all states fluctuate from 2002 to 2010. Overall, there is a slight decreasing trend.  
 
 #### Make a two-panel plot showing, for the years 2006, and 2010, distribution of data_value for responses (“Poor” to “Excellent”) among locations in NY State:
 ```{r}
 brfss_df %>% 
-  filter(year == 2006 | year == 2010, state == "NY") %>% 
+  filter(year %in% c(2006, 2010), state == "NY") %>% 
   ggplot(aes(x = response, y = data_value)) +
   geom_boxplot() +
   labs(
-    title = "Distribution of Data Values in NY State",
+    title = "Distribution of Data Values for Responses in NY State",
     x = "Response",
     y = "Data Values"
   ) +
   facet_grid(. ~ year)
 ```
+
 * From the plot, we can see that data values for positive responses(excellent, very good, good) were greater than those for fair and poor responses in both 2006 and 2010.
 
 # Problem 3
@@ -221,7 +222,7 @@ accelerometer_df
 
 ## Aggregate activity counts for each day.
 
-```{r}
+```{r, message = FALSE}
 accelerometer_df %>% 
   group_by(week, day) %>% 
   summarize(activity_total = sum(activity_count)) %>% 
@@ -236,14 +237,16 @@ accelerometer_df %>%
 
 ## Make a plot showing the 24-hour activity time courses for each day.
 
-```{r}
+```{r, message = FALSE}
 accelerometer_df %>% 
-  ggplot(aes(x = minute, y = activity_count, color = day, group = day_id)) +
+  group_by(day, minute) %>% 
+  summarize(avg_activity = mean(activity_count)) %>% 
+  ggplot(aes(x = minute, y = avg_activity, color = day)) +
   geom_line(alpha = 0.6) + 
   labs(
-    title = "24-hour Activity Counts",
+    title = "Average 24-hour Activity Time Courses",
     x = "Time",
-    y = "Activity Counts",
+    y = "Average Activity",
     color = "Day"
   ) +
   scale_x_continuous(
@@ -252,7 +255,9 @@ accelerometer_df %>%
     limits = c(0, 1440)
   )
 ```
-* From the plot, we can see that activity counts tend to be higher in 3 periods of time on each day: 6am-12pm, 4pm-6pm, and 8pm-10pm(especially on Wed and Fri); activity counts tend to be lower from 10pm-6pm each day which may be the sleeping period. 
+
+* From the plot, we can see that of the 5 weeks, the average activity counts of each day tend to be lower from 10pm to 6am which may be the sleeping period; the average activity tend to be higher in 3 periods of time on each day: 6am-12pm, 4pm-6pm, and 8pm-10pm. Especially on Fridays, this man was much more active from 8pm to 10pm, and on Sundays, he was much more active from 10am-12pm.
+
 
 
 
